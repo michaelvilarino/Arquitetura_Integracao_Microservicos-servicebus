@@ -2,6 +2,7 @@
 
 
 using ConsoleQueue;
+using Microsoft.Azure.ServiceBus;
 
 internal class Program
 {
@@ -9,14 +10,15 @@ internal class Program
     {        
       var queueManager = new QueueManager();
 
-      //queueManager.SendMessagesAsync().GetAwaiter().GetResult();
-      //Console.WriteLine("messages were sent");
-      //Console.ReadLine();
-
-      if (args.Length <= 0 || args[0] == "sender")
+      if (args.Contains("send"))
       {
-          queueManager.SendMessagesAsync().GetAwaiter().GetResult();
-          Console.WriteLine("messages were sent");
+          var messages = args.Where(f => f != "send").Select(s => s).ToList();
+
+            messages.ForEach(message =>
+            {
+                queueManager.SendMessagesAsync(message).GetAwaiter().GetResult();
+                Console.WriteLine($"message sended: {message} ");
+            });
       }
       else if (args[0] == "receiver")
       {

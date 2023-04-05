@@ -10,18 +10,16 @@ namespace ConsoleQueue
         const string QueueConnectionString = "Endpoint=sb://michaelvilarino.servicebus.windows.net/;SharedAccessKeyName=ProductPolicy;SharedAccessKey=x1qq3Go3CDI9RCyDrqCNldoabVqDpoRGq+ASbH1FsfY=";
         const string QueuePath = "ProductChanged";
 
-        public async Task SendMessagesAsync()
+        public async Task SendMessagesAsync(string messageSend)
         {
-            _queueClient = new QueueClient(QueueConnectionString, QueuePath);
-            var messages = "Hi,Hello,Hey,How are you,Be Welcome".Split(',')
-                .Select(msg => {
-                    Console.WriteLine($"Will send message: {msg}");
-                    return new Message(Encoding.UTF8.GetBytes(msg));
-                }).ToList();
+            Message message = new Message(Encoding.UTF8.GetBytes(messageSend));
 
-            var sendTask = _queueClient.SendAsync(messages);
+            _queueClient = new QueueClient(QueueConnectionString, QueuePath);
+
+            var sendTask = _queueClient.SendAsync(message);
             await sendTask;
             CheckCommunicationExceptions(sendTask);
+
             var closeTask = _queueClient.CloseAsync();
             await closeTask;
             CheckCommunicationExceptions(closeTask);
@@ -36,18 +34,18 @@ namespace ConsoleQueue
             Console.ReadLine();
             await _queueClient.CloseAsync();
         }
+        public async Task MessageHandler(Message message, CancellationToken cancellationToken)
+        {
+            Console.WriteLine($"Received message:{Encoding.UTF8.GetString(message.Body)}");
+            await _queueClient.CompleteAsync(message.SystemProperties.LockToken);
+        }
+
         public Task ExceptionHandler(ExceptionReceivedEventArgs exceptionArgs)
         {
             Console.WriteLine($"Message handler encountered an exception {exceptionArgs.Exception}.");
             var context = exceptionArgs.ExceptionReceivedContext;
             Console.WriteLine($"Endpoint:{context.Endpoint}, Path:{context.EntityPath}, Action:{context.Action}");
             return Task.CompletedTask;
-        }
-
-        public async Task MessageHandler(Message message, CancellationToken cancellationToken)
-        {
-            Console.WriteLine($"Received message:{Encoding.UTF8.GetString(message.Body)}");
-            await _queueClient.CompleteAsync(message.SystemProperties.LockToken);
         }
 
         public bool CheckCommunicationExceptions(Task task)
